@@ -4,6 +4,7 @@ __version__ = '0.0.6-a'
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.feature_extraction import DictVectorizer
 from sklearn import cross_validation
 from sklearn import grid_search
 
@@ -93,6 +94,19 @@ class DataFrameMapper(BaseEstimator, TransformerMixin):
          
         return t
 
+    def dict_data(self, X, column):
+        '''
+        Returns a list of coulmn and and its value from Panda Data Frame
+        X Data Frame
+        column field name
+        '''
+        # vectorize those dicts
+        # http://stackoverflow.com/questions/15181311/using-dictvectorizer-with-sklearn-decisiontreeclassifier
+        rows = []
+        for index in X[column].index:
+            rows.append({column : X[column][index]})
+        return rows
+
 
     def fit(self, X, y=None):
         '''
@@ -102,7 +116,11 @@ class DataFrameMapper(BaseEstimator, TransformerMixin):
         '''
         for columns, transformer in self.features:
             if transformer is not None:
-                transformer.fit(self._get_col_subset(X, columns))
+                # check if transformer is an instance of DictVectorizer 
+                if isinstance(transformer, DictVectorizer):
+                    transformer.fit(self.dict_data(X, columns))
+                else:
+                    transformer.fit(self._get_col_subset(X, columns))
         return self
 
 
@@ -118,7 +136,10 @@ class DataFrameMapper(BaseEstimator, TransformerMixin):
             # strings; we don't care because pandas
             # will handle either.
             if transformer is not None:
-                fea = transformer.transform(self._get_col_subset(X, columns))
+                if isinstance(transformer, DictVectorizer):
+                    fea = transformer.transform(self.dict_data(X, columns))
+                else:
+                    fea = transformer.transform(self._get_col_subset(X, columns))
             else:
                 fea = self._get_col_subset(X, columns)
             
